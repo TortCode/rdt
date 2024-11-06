@@ -13,8 +13,16 @@ type connInfo struct {
 	localSenderRecvChan   chan *message.AddressedMessage
 	localReceiverRecvChan chan *message.AddressedMessage
 	localInputChan        chan rune
+	waitChan              chan rune
 	sender                *Sender
 	receiver              *Receiver
+}
+
+func (w *connInfo) RunWaiter() {
+	for r := range w.waitChan {
+		w.sender.WaitForReady()
+		w.localInputChan <- r
+	}
 }
 
 type Multiplexer struct {
@@ -53,15 +61,18 @@ func (m *Multiplexer) addHandler(addr netip.AddrPort) {
 	localSenderRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
 	localReceiverRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
 	localInputChan := make(chan rune, config.LocalInputChannelBufferSize)
+	waitChan := make(chan rune, config.WaiterChannelBufferSize)
 	ci := &connInfo{
 		localSenderRecvChan:   localSenderRecvChan,
 		localReceiverRecvChan: localReceiverRecvChan,
 		localInputChan:        localInputChan,
+		waitChan:              waitChan,
 		sender:                NewSender(m.sendChan, localSenderRecvChan, localInputChan, addr),
 		receiver:              NewReceiver(m.sendChan, localReceiverRecvChan, m.outputChan, addr),
 	}
 	go ci.sender.Start()
 	go ci.receiver.Start()
+	go ci.RunWaiter()
 	m.connInfos[addr] = ci
 }
 
@@ -100,13 +111,10 @@ func (m *Multiplexer) Start() {
 			}
 		case r := <-m.inputChan:
 			cis := m.loadAllConnInfos()
-			go func() {
-				// broadcast char to all senders (should only be 1 for client)
-				for _, ci := range cis {
-					ci.sender.WaitForReady()
-					ci.localInputChan <- r
-				}
-			}()
+			// broadcast char to all senders (should only be 1 for client)
+			for _, ci := range cis {
+				ci.waitChan <- r
+			}
 		}
 	}
 }
@@ -116,6 +124,7 @@ func (m *Multiplexer) Stop() {
 	for _, ci := range m.connInfos {
 		ci.sender.Stop()
 		ci.receiver.Stop()
+		close(ci.waitChan)
 		close(ci.localInputChan)
 		close(ci.localReceiverRecvChan)
 		close(ci.localSenderRecvChan)
