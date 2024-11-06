@@ -28,6 +28,7 @@ func main() {
 	}()
 
 	transport := gbn.NewTransport(conn)
+	transport.Start()
 	defer transport.Stop()
 
 	for {
