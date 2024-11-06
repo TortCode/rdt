@@ -66,14 +66,14 @@ func (m *Multiplexer) loadConnInfo(addr *net.UDPAddr) *connInfo {
 	return m.connInfos[addr]
 }
 
-func (m *Multiplexer) broadcast(r rune) {
+func (m *Multiplexer) loadAllConnInfos() []*connInfo {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	// broadcast char to all senders (should only be 1 for client)
+	cis := make([]*connInfo, 0, len(m.connInfos))
 	for _, ci := range m.connInfos {
-		ci.sender.WaitForReady()
-		ci.localInputChan <- r
+		cis = append(cis, ci)
 	}
+	return cis
 }
 
 func (m *Multiplexer) Start() {
@@ -94,7 +94,14 @@ func (m *Multiplexer) Start() {
 				ci.localReceiverRecvChan <- msg
 			}
 		case r := <-m.inputChan:
-			m.broadcast(r)
+			cis := m.loadAllConnInfos()
+			go func() {
+				// broadcast char to all senders (should only be 1 for client)
+				for _, ci := range cis {
+					ci.sender.WaitForReady()
+					ci.localInputChan <- r
+				}
+			}()
 		}
 	}
 }
