@@ -1,6 +1,7 @@
 package gbn
 
 import (
+	"log"
 	"net"
 	"rdt/internal/config"
 	"rdt/internal/message"
@@ -79,7 +80,9 @@ func (s *Sender) Start() {
 			// store character in buffer
 			s.buf[s.nextSeqNo%config.WindowSize] = char
 			// send data
-			s.sendQueue <- message.NewDataMessage(s.remoteAddr, s.nextSeqNo, char)
+			msg := message.NewDataMessage(s.remoteAddr, s.nextSeqNo, char)
+			s.sendQueue <- msg
+			log.Printf("RDT SEND %+v\n", msg)
 			if s.baseSeqNo == s.nextSeqNo {
 				// start timer for oldest unacked message
 				s.timeout.Start()
@@ -92,7 +95,9 @@ func (s *Sender) Start() {
 			// resend all unacked messages
 			for i := s.baseSeqNo; i != s.nextSeqNo; i = (i + 1) % config.MaxSeqNo {
 				char := s.buf[i%config.WindowSize]
-				s.sendQueue <- message.NewDataMessage(s.remoteAddr, i, char)
+				msg := message.NewDataMessage(s.remoteAddr, i, char)
+				s.sendQueue <- msg
+				log.Printf("RDT SEND %+v\n", msg)
 			}
 		}
 	}

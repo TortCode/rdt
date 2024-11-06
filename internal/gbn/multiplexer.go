@@ -39,6 +39,22 @@ func NewMultiplexer(
 	}
 }
 
+func (m *Multiplexer) addHandler(addr *net.UDPAddr) {
+	localSenderRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
+	localReceiverRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
+	localInputChan := make(chan rune, config.LocalInputChannelBufferSize)
+	ci := &connInfo{
+		localSenderRecvChan:   localSenderRecvChan,
+		localReceiverRecvChan: localReceiverRecvChan,
+		localInputChan:        localInputChan,
+		sender:                NewSender(m.sendChan, localSenderRecvChan, localInputChan, addr),
+		receiver:              NewReceiver(m.sendChan, localReceiverRecvChan, m.outputChan, addr),
+	}
+	go ci.sender.Start()
+	go ci.receiver.Start()
+	m.connInfos[addr] = ci
+}
+
 func (m *Multiplexer) Start() {
 	defer m.term.Done()
 	for {
@@ -48,19 +64,8 @@ func (m *Multiplexer) Start() {
 		case msg := <-m.recvChan:
 			ci, found := m.connInfos[msg.Addr]
 			if !found {
-				localSenderRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
-				localReceiverRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
-				localInputChan := make(chan rune, config.LocalInputChannelBufferSize)
-				ci = &connInfo{
-					localSenderRecvChan:   localSenderRecvChan,
-					localReceiverRecvChan: localReceiverRecvChan,
-					localInputChan:        localInputChan,
-					sender:                NewSender(m.sendChan, localSenderRecvChan, localInputChan, msg.Addr),
-					receiver:              NewReceiver(m.sendChan, localReceiverRecvChan, m.outputChan, msg.Addr),
-				}
-				go ci.sender.Start()
-				go ci.receiver.Start()
-				m.connInfos[msg.Addr] = ci
+				m.addHandler(msg.Addr)
+				ci = m.connInfos[msg.Addr]
 			}
 			if msg.IsAck {
 				ci.localSenderRecvChan <- msg

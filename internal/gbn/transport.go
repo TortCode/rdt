@@ -25,6 +25,10 @@ func NewTransport(conn *net.UDPConn) *Transport {
 	}
 }
 
+func (t *Transport) AddHandler(addr *net.UDPAddr) {
+	t.mux.addHandler(addr)
+}
+
 func (t *Transport) InputChan() chan<- rune {
 	return t.mux.inputChan
 }

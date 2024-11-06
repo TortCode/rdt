@@ -1,6 +1,7 @@
 package udp
 
 import (
+	"log"
 	"net"
 	"rdt/internal/message"
 	"rdt/internal/util"
@@ -38,6 +39,7 @@ func (s *Sender) Start() {
 			if _, err := s.conn.WriteToUDP(data, msg.Addr); err != nil {
 				return
 			}
+			log.Printf("UDP SEND %+v\n", msg)
 		}
 	}
 }

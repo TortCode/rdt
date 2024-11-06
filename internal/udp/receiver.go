@@ -1,6 +1,7 @@
 package udp
 
 import (
+	"log"
 	"net"
 	"rdt/internal/message"
 	"rdt/internal/util"
@@ -44,6 +45,7 @@ func (r *Receiver) Start() {
 		if err := msg.UnmarshalText(buf[:n]); err != nil {
 			continue
 		}
+		log.Printf("UDP RECV %+v\n", msg)
 		r.ch <- msg
 	}
 }

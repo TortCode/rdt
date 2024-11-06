@@ -1,6 +1,7 @@
 package gbn
 
 import (
+	"log"
 	"net"
 	"rdt/internal/config"
 	"rdt/internal/message"
@@ -46,6 +47,7 @@ func (r *Receiver) Start() {
 		case <-r.term.Quit():
 			return
 		case msg := <-r.recvQueue:
+			log.Printf("RDT RECV %+v\n", msg)
 			if !msg.IsAck && msg.SeqNo == r.expectedSeqNo {
 				// send output to user
 				r.outputChan <- msg.Char

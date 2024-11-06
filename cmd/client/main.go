@@ -29,6 +29,7 @@ func main() {
 
 	transport := gbn.NewTransport(conn)
 	transport.Start()
+	transport.AddHandler(serverAddr)
 	defer transport.Stop()
 
 	consoleReader := bufio.NewReader(os.Stdin)
