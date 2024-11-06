@@ -51,6 +51,7 @@ func (s *Sender) WaitForReady() {
 }
 
 func (s *Sender) Start() {
+	log.Printf("gbn.Sender: START %v\n", s.remoteAddr)
 	// signal done after completion
 	defer s.term.Done()
 	for {
@@ -59,22 +60,21 @@ func (s *Sender) Start() {
 		case <-s.term.Quit():
 			return
 		case msg := <-s.recvQueue:
-			if msg.IsAck {
-				// shift window
-				newBaseSeqNo := (msg.SeqNo + 1) % config.MaxSeqNo
-				windowShift := (newBaseSeqNo - s.baseSeqNo + config.MaxSeqNo) % config.MaxSeqNo
-				s.baseSeqNo = newBaseSeqNo
-				// signal availability for new messages
-				for i := uint32(0); i < windowShift; i++ {
-					<-s.sem
-				}
+			log.Printf("gbn.Sender: RECV %+v\n", msg)
+			// shift window
+			newBaseSeqNo := (msg.SeqNo + 1) % config.MaxSeqNo
+			windowShift := (newBaseSeqNo - s.baseSeqNo + config.MaxSeqNo) % config.MaxSeqNo
+			s.baseSeqNo = newBaseSeqNo
+			// signal availability for new messages
+			for i := uint32(0); i < windowShift; i++ {
+				<-s.sem
+			}
 
-				// reset timer for oldest unacked message
-				if s.baseSeqNo == s.nextSeqNo {
-					s.timeout.Stop()
-				} else {
-					s.timeout.Start()
-				}
+			// reset timer for oldest unacked message
+			if s.baseSeqNo == s.nextSeqNo {
+				s.timeout.Stop()
+			} else {
+				s.timeout.Start()
 			}
 		case char := <-s.inputChan:
 			// store character in buffer
@@ -82,7 +82,7 @@ func (s *Sender) Start() {
 			// send data
 			msg := message.NewDataMessage(s.remoteAddr, s.nextSeqNo, char)
 			s.sendQueue <- msg
-			log.Printf("RDT SEND %+v\n", msg)
+			log.Printf("gbn.Sender: SEND %+v\n", msg)
 			if s.baseSeqNo == s.nextSeqNo {
 				// start timer for oldest unacked message
 				s.timeout.Start()
@@ -97,7 +97,7 @@ func (s *Sender) Start() {
 				char := s.buf[i%config.WindowSize]
 				msg := message.NewDataMessage(s.remoteAddr, i, char)
 				s.sendQueue <- msg
-				log.Printf("RDT SEND %+v\n", msg)
+				log.Printf("gbn.Sender: SEND %+v\n", msg)
 			}
 		}
 	}

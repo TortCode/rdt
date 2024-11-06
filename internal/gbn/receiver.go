@@ -39,6 +39,7 @@ func NewReceiver(
 }
 
 func (r *Receiver) Start() {
+	log.Printf("gbn.Receiver: START %v\n", r.remoteAddr)
 	// signal done after completion
 	defer r.term.Done()
 	for {
@@ -47,8 +48,8 @@ func (r *Receiver) Start() {
 		case <-r.term.Quit():
 			return
 		case msg := <-r.recvQueue:
-			log.Printf("RDT RECV %+v\n", msg)
-			if !msg.IsAck && msg.SeqNo == r.expectedSeqNo {
+			log.Printf("gbn.Receiver: RECV %+v\n", msg)
+			if msg.SeqNo == r.expectedSeqNo {
 				// send output to user
 				r.outputChan <- msg.Char
 				// increment expected sequence no.
@@ -57,7 +58,9 @@ func (r *Receiver) Start() {
 			}
 			// send ack
 			prevSeqNo := (r.expectedSeqNo - 1 + config.MaxSeqNo) % config.MaxSeqNo
-			r.sendQueue <- message.NewAckMessage(r.remoteAddr, prevSeqNo)
+			ackMsg := message.NewAckMessage(r.remoteAddr, prevSeqNo)
+			r.sendQueue <- ackMsg
+			log.Printf("gbn.Receiver: SEND %+v\n", msg)
 		}
 	}
 }
