@@ -5,6 +5,7 @@ import (
 	"rdt/internal/config"
 	"rdt/internal/message"
 	"rdt/internal/util"
+	"sync"
 )
 
 type connInfo struct {
@@ -21,6 +22,7 @@ type Multiplexer struct {
 	inputChan  chan rune
 	outputChan chan rune
 	connInfos  map[*net.UDPAddr]*connInfo
+	mu         sync.RWMutex
 	term       *util.Terminator
 }
 
@@ -41,6 +43,8 @@ func NewMultiplexer(
 }
 
 func (m *Multiplexer) addHandler(addr *net.UDPAddr) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	localSenderRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
 	localReceiverRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
 	localInputChan := make(chan rune, config.LocalInputChannelBufferSize)
@@ -56,6 +60,22 @@ func (m *Multiplexer) addHandler(addr *net.UDPAddr) {
 	m.connInfos[addr] = ci
 }
 
+func (m *Multiplexer) loadConnInfo(addr *net.UDPAddr) *connInfo {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.connInfos[addr]
+}
+
+func (m *Multiplexer) broadcast(r rune) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	// broadcast char to all senders (should only be 1 for client)
+	for _, ci := range m.connInfos {
+		ci.sender.WaitForReady()
+		ci.localInputChan <- r
+	}
+}
+
 func (m *Multiplexer) Start() {
 	defer m.term.Done()
 	for {
@@ -63,10 +83,10 @@ func (m *Multiplexer) Start() {
 		case <-m.term.Quit():
 			return
 		case msg := <-m.recvChan:
-			ci, found := m.connInfos[msg.Addr]
-			if !found {
+			ci := m.loadConnInfo(msg.Addr)
+			if ci == nil {
 				m.addHandler(msg.Addr)
-				ci = m.connInfos[msg.Addr]
+				ci = m.loadConnInfo(msg.Addr)
 			}
 			if msg.IsAck {
 				ci.localSenderRecvChan <- msg
@@ -74,11 +94,7 @@ func (m *Multiplexer) Start() {
 				ci.localReceiverRecvChan <- msg
 			}
 		case r := <-m.inputChan:
-			// broadcast char to all senders (should only be 1 for client)
-			for _, ci := range m.connInfos {
-				ci.sender.WaitForReady()
-				ci.localInputChan <- r
-			}
+			m.broadcast(r)
 		}
 	}
 }

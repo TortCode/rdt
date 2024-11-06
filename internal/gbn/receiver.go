@@ -33,7 +33,7 @@ func NewReceiver(
 		sendQueue:     sendQueue,
 		recvQueue:     recvQueue,
 		outputChan:    outputChan,
-		expectedSeqNo: 1,
+		expectedSeqNo: 0,
 		term:          util.NewTerminator(),
 	}
 }

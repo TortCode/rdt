@@ -33,10 +33,12 @@ func (s *Sender) Start() {
 			// encode from message
 			data, err := msg.MarshalText()
 			if err != nil {
+				log.Printf("udp.Sender: failed to marshal message: %v", err)
 				continue
 			}
 			// write data
 			if _, err := s.conn.WriteToUDP(data, msg.Addr); err != nil {
+				log.Printf("udp.Sender: failed to send message: %v", err)
 				return
 			}
 			log.Printf("UDP SEND %+v\n", msg)

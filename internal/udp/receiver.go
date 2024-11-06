@@ -35,6 +35,7 @@ func (r *Receiver) Start() {
 		// read data
 		n, addr, err := r.conn.ReadFromUDP(buf)
 		if err != nil {
+			log.Printf("udp.Receiver: failed to recv message: %v", err)
 			return
 		}
 		// decode into message
@@ -43,6 +44,7 @@ func (r *Receiver) Start() {
 			Addr:    addr,
 		}
 		if err := msg.UnmarshalText(buf[:n]); err != nil {
+			log.Printf("udp.Receiver: failed to unmarshal message: %v", err)
 			continue
 		}
 		log.Printf("UDP RECV %+v\n", msg)
