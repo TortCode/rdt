@@ -33,15 +33,15 @@ func NewSender(
 	remoteAddr *net.UDPAddr,
 ) *Sender {
 	return &Sender{
+		remoteAddr: remoteAddr,
 		sendQueue:  sendQueue,
 		recvQueue:  recvQueue,
 		inputChan:  inputChan,
 		sem:        make(chan struct{}, config.WindowSize),
 		baseSeqNo:  1,
 		nextSeqNo:  1,
-		timeout:    NewTimeoutTimer(config.Timeout),
 		buf:        make([]rune, config.WindowSize),
-		remoteAddr: remoteAddr,
+		timeout:    NewTimeoutTimer(config.Timeout),
 		term:       util.NewTerminator(),
 	}
 }

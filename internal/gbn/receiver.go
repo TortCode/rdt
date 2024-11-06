@@ -29,11 +29,11 @@ func NewReceiver(
 	remoteAddr *net.UDPAddr,
 ) *Receiver {
 	return &Receiver{
+		remoteAddr:    remoteAddr,
 		sendQueue:     sendQueue,
 		recvQueue:     recvQueue,
 		outputChan:    outputChan,
 		expectedSeqNo: 1,
-		remoteAddr:    remoteAddr,
 		term:          util.NewTerminator(),
 	}
 }

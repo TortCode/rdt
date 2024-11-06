@@ -33,9 +33,10 @@ func NewMultiplexer(
 	return &Multiplexer{
 		sendChan:   sendChan,
 		recvChan:   recvChan,
-		term:       util.NewTerminator(),
 		inputChan:  inputChan,
 		outputChan: outputChan,
+		connInfos:  make(map[*net.UDPAddr]*connInfo),
+		term:       util.NewTerminator(),
 	}
 }
 
