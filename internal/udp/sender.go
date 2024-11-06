@@ -41,7 +41,7 @@ func (s *Sender) Start() {
 				log.Printf("udp.Sender: failed to send message: %v", err)
 				return
 			}
-			log.Printf("UDP SEND %+v\n", msg)
+			log.Printf("udp.Sender: SEND %+v\n", msg)
 		}
 	}
 }

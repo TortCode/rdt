@@ -37,7 +37,7 @@ func main() {
 		case <-done:
 			return
 		case r := <-transport.OutputChan():
-			fmt.Print(r)
+			fmt.Printf("OUT: %c\n", r)
 		}
 	}
 }

@@ -112,9 +112,11 @@ func (m *Multiplexer) Start() {
 		case r := <-m.inputChan:
 			cis := m.loadAllConnInfos()
 			// broadcast char to all senders (should only be 1 for client)
-			for _, ci := range cis {
-				ci.waitChan <- r
-			}
+			go func() {
+				for _, ci := range cis {
+					ci.waitChan <- r
+				}
+			}()
 		}
 	}
 }
