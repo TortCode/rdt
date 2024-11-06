@@ -18,8 +18,8 @@ type connInfo struct {
 type Multiplexer struct {
 	sendChan   chan *message.AddressedMessage // outgoing messages
 	recvChan   chan *message.AddressedMessage // incoming messages
-	inputChan  <-chan rune
-	outputChan chan<- rune
+	inputChan  chan rune
+	outputChan chan rune
 	connInfos  map[*net.UDPAddr]*connInfo
 	term       *util.Terminator
 }
@@ -27,8 +27,8 @@ type Multiplexer struct {
 func NewMultiplexer(
 	sendChan chan *message.AddressedMessage,
 	recvChan chan *message.AddressedMessage,
-	inputChan <-chan rune,
-	outputChan chan<- rune,
+	inputChan chan rune,
+	outputChan chan rune,
 ) *Multiplexer {
 	return &Multiplexer{
 		sendChan:   sendChan,

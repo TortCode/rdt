@@ -8,11 +8,9 @@ import (
 )
 
 type Transport struct {
-	sender     *udp.Sender
-	receiver   *udp.Receiver
-	mux        *Multiplexer
-	inputChan  chan rune
-	outputChan chan rune
+	sender   *udp.Sender
+	receiver *udp.Receiver
+	mux      *Multiplexer
 }
 
 func NewTransport(conn *net.UDPConn) *Transport {
@@ -28,11 +26,11 @@ func NewTransport(conn *net.UDPConn) *Transport {
 }
 
 func (t *Transport) InputChan() chan<- rune {
-	return t.inputChan
+	return t.mux.inputChan
 }
 
 func (t *Transport) OutputChan() <-chan rune {
-	return t.outputChan
+	return t.mux.outputChan
 }
 
 func (t *Transport) Start() {
@@ -47,6 +45,6 @@ func (t *Transport) Stop() {
 	t.mux.Stop()
 	close(t.mux.sendChan)
 	close(t.mux.recvChan)
-	close(t.inputChan)
-	close(t.outputChan)
+	close(t.mux.inputChan)
+	close(t.mux.outputChan)
 }
