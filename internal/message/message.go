@@ -46,7 +46,7 @@ func (message *Message) MarshalText() (text []byte, err error) {
 		text = []byte(fmt.Sprintln("ACK", message.SeqNo))
 	} else {
 		// format data message
-		text = []byte(fmt.Sprintln("DATA", message.SeqNo, message.Char))
+		text = []byte(fmt.Sprintln("DATA", message.SeqNo, string(message.Char)))
 	}
 	return
 }

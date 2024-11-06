@@ -10,6 +10,7 @@ import (
 	"os"
 	"rdt/internal/config"
 	"rdt/internal/gbn"
+	"unicode"
 )
 
 func main() {
@@ -40,7 +41,9 @@ func main() {
 			}
 			log.Fatalln(err)
 		}
-		transport.InputChan() <- r
+		if !unicode.IsSpace(r) {
+			transport.InputChan() <- r
+		}
 	}
 }
 
