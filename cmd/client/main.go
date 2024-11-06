@@ -46,10 +46,15 @@ func main() {
 
 func serverAddress() netip.AddrPort {
 	serverName := os.Args[1]
-	serverAddr, err := netip.ParseAddr(serverName)
+	serverIpAddrs, err := net.LookupIP(serverName)
 	if err != nil {
 		log.Fatalln("Failed to parse server address:", err)
 	}
-	serverAddrPort := netip.AddrPortFrom(serverAddr, config.PortNumber)
+	log.Println("Available server addresses:", serverIpAddrs)
+	serverIpAddr, ok := netip.AddrFromSlice(serverIpAddrs[0])
+	if !ok {
+		log.Fatalln("Failed to parse server address")
+	}
+	serverAddrPort := netip.AddrPortFrom(serverIpAddr, config.PortNumber)
 	return serverAddrPort
 }
