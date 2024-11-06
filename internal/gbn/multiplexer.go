@@ -46,6 +46,10 @@ func NewMultiplexer(
 func (m *Multiplexer) addHandler(addr *net.UDPAddr) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if _, ok := m.connInfos[addr]; ok {
+		return
+	}
+	log.Printf("New connection from: %s", addr)
 	localSenderRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
 	localReceiverRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
 	localInputChan := make(chan rune, config.LocalInputChannelBufferSize)
@@ -85,11 +89,8 @@ func (m *Multiplexer) Start() {
 			return
 		case msg := <-m.recvChan:
 			log.Printf("gbn.Multiplexer: got %+v\n", msg)
+			m.addHandler(msg.Addr)
 			ci := m.loadConnInfo(msg.Addr)
-			if ci == nil {
-				m.addHandler(msg.Addr)
-				ci = m.loadConnInfo(msg.Addr)
-			}
 			if msg.IsAck {
 				ci.localSenderRecvChan <- msg
 				log.Printf("gbn.Multiplexer: forward ack %+v\n", msg)
