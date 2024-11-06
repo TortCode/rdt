@@ -50,6 +50,9 @@ func serverAddress() netip.AddrPort {
 	if err != nil {
 		log.Fatalln("Failed to parse server address:", err)
 	}
+	for i := range serverIpAddrs {
+		serverIpAddrs[i] = serverIpAddrs[i].To16()
+	}
 	log.Println("Available server addresses:", serverIpAddrs)
 	serverIpAddr, ok := netip.AddrFromSlice(serverIpAddrs[0])
 	if !ok {
