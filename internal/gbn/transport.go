@@ -2,6 +2,7 @@ package gbn
 
 import (
 	"net"
+	"net/netip"
 	"rdt/internal/config"
 	"rdt/internal/message"
 	"rdt/internal/udp"
@@ -25,7 +26,7 @@ func NewTransport(conn *net.UDPConn) *Transport {
 	}
 }
 
-func (t *Transport) AddHandler(addr *net.UDPAddr) {
+func (t *Transport) AddHandler(addr netip.AddrPort) {
 	t.mux.addHandler(addr)
 }
 

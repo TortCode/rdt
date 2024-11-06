@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
 	"rdt/internal/config"
 	"rdt/internal/gbn"
 )
 
 func main() {
-	listenerAddr := listenerAddress()
+	listenerAddr := netip.AddrPortFrom(netip.IPv6Unspecified(), config.PortNumber)
 
-	conn, err := net.ListenUDP("udp", listenerAddr)
+	conn, err := net.ListenUDP("udp", net.UDPAddrFromAddrPort(listenerAddr))
 	if err != nil {
 		log.Fatalln("Failed to bind to port:", err)
 	}
@@ -39,13 +40,4 @@ func main() {
 			fmt.Print(r)
 		}
 	}
-}
-
-func listenerAddress() *net.UDPAddr {
-	listenerAddressStr := fmt.Sprintf(":%v", config.PortNumber)
-	listenerAddr, err := net.ResolveUDPAddr("udp", listenerAddressStr)
-	if err != nil {
-		log.Fatalln("Failed to resolve listener address:", err)
-	}
-	return listenerAddr
 }

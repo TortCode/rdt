@@ -33,7 +33,7 @@ func (r *Receiver) Start() {
 		default:
 		}
 		// read data
-		n, addr, err := r.conn.ReadFromUDP(buf)
+		n, addr, err := r.conn.ReadFromUDPAddrPort(buf)
 		if err != nil {
 			log.Printf("udp.Receiver: failed to recv message: %v", err)
 			return

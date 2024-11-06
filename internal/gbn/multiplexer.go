@@ -2,7 +2,7 @@ package gbn
 
 import (
 	"log"
-	"net"
+	"net/netip"
 	"rdt/internal/config"
 	"rdt/internal/message"
 	"rdt/internal/util"
@@ -22,7 +22,7 @@ type Multiplexer struct {
 	recvChan   chan *message.AddressedMessage // incoming messages
 	inputChan  chan rune
 	outputChan chan rune
-	connInfos  map[*net.UDPAddr]*connInfo
+	connInfos  map[netip.AddrPort]*connInfo
 	mu         sync.RWMutex
 	term       *util.Terminator
 }
@@ -38,12 +38,12 @@ func NewMultiplexer(
 		recvChan:   recvChan,
 		inputChan:  inputChan,
 		outputChan: outputChan,
-		connInfos:  make(map[*net.UDPAddr]*connInfo),
+		connInfos:  make(map[netip.AddrPort]*connInfo),
 		term:       util.NewTerminator(),
 	}
 }
 
-func (m *Multiplexer) addHandler(addr *net.UDPAddr) {
+func (m *Multiplexer) addHandler(addr netip.AddrPort) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, ok := m.connInfos[addr]; ok {
@@ -65,7 +65,7 @@ func (m *Multiplexer) addHandler(addr *net.UDPAddr) {
 	m.connInfos[addr] = ci
 }
 
-func (m *Multiplexer) loadConnInfo(addr *net.UDPAddr) *connInfo {
+func (m *Multiplexer) loadConnInfo(addr netip.AddrPort) *connInfo {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.connInfos[addr]

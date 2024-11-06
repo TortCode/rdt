@@ -3,14 +3,14 @@ package message
 import (
 	"errors"
 	"fmt"
-	"net"
+	"net/netip"
 	"strconv"
 	"strings"
 )
 
 type AddressedMessage struct {
 	Message
-	Addr *net.UDPAddr
+	Addr netip.AddrPort
 }
 
 type Message struct {
@@ -19,7 +19,7 @@ type Message struct {
 	Char  rune
 }
 
-func NewDataMessage(addr *net.UDPAddr, seqNo uint32, char rune) *AddressedMessage {
+func NewDataMessage(addr netip.AddrPort, seqNo uint32, char rune) *AddressedMessage {
 	return &AddressedMessage{
 		Message: Message{
 			IsAck: false,
@@ -30,7 +30,7 @@ func NewDataMessage(addr *net.UDPAddr, seqNo uint32, char rune) *AddressedMessag
 	}
 }
 
-func NewAckMessage(addr *net.UDPAddr, seqNo uint32) *AddressedMessage {
+func NewAckMessage(addr netip.AddrPort, seqNo uint32) *AddressedMessage {
 	return &AddressedMessage{
 		Message: Message{
 			IsAck: true,

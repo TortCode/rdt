@@ -2,7 +2,7 @@ package gbn
 
 import (
 	"log"
-	"net"
+	"net/netip"
 	"rdt/internal/config"
 	"rdt/internal/message"
 	"rdt/internal/util"
@@ -11,7 +11,7 @@ import (
 // Sender implements the "Go Back N" sender protocol for pipelined reliable data transfer
 type Sender struct {
 	// message transceiver fields
-	remoteAddr *net.UDPAddr                     // address of receiver
+	remoteAddr netip.AddrPort                   // address of receiver
 	sendQueue  chan<- *message.AddressedMessage // outgoing message queue
 	recvQueue  <-chan *message.AddressedMessage // incoming message queue
 	// user send fields
@@ -30,7 +30,7 @@ func NewSender(
 	sendQueue chan<- *message.AddressedMessage,
 	recvQueue <-chan *message.AddressedMessage,
 	inputChan <-chan rune,
-	remoteAddr *net.UDPAddr,
+	remoteAddr netip.AddrPort,
 ) *Sender {
 	return &Sender{
 		remoteAddr: remoteAddr,

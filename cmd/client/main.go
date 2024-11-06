@@ -3,10 +3,10 @@ package main
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
+	"net/netip"
 	"os"
 	"rdt/internal/config"
 	"rdt/internal/gbn"
@@ -18,7 +18,7 @@ func main() {
 	}
 
 	serverAddr := serverAddress()
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
+	conn, err := net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.AddrPortFrom(netip.IPv6Unspecified(), 0)))
 	if err != nil {
 		log.Fatalln("Failed to connect to server:", err)
 	}
@@ -44,12 +44,12 @@ func main() {
 	}
 }
 
-func serverAddress() *net.UDPAddr {
+func serverAddress() netip.AddrPort {
 	serverName := os.Args[1]
-	serverAddrStr := fmt.Sprintf("%v:%v", serverName, config.PortNumber)
-	serverAddr, err := net.ResolveUDPAddr("udp", serverAddrStr)
+	serverAddr, err := netip.ParseAddr(serverName)
 	if err != nil {
-		log.Fatalln("Failed to resolve server address:", err)
+		log.Fatalln("Failed to parse server address:", err)
 	}
-	return serverAddr
+	serverAddrPort := netip.AddrPortFrom(serverAddr, config.PortNumber)
+	return serverAddrPort
 }

@@ -37,7 +37,7 @@ func (s *Sender) Start() {
 				continue
 			}
 			// write data
-			if _, err := s.conn.WriteToUDP(data, msg.Addr); err != nil {
+			if _, err := s.conn.WriteToUDPAddrPort(data, msg.Addr); err != nil {
 				log.Printf("udp.Sender: failed to send message: %v", err)
 				return
 			}
