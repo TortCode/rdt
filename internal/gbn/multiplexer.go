@@ -32,7 +32,8 @@ type Multiplexer struct {
 	outputChan chan rune
 	connInfos  map[netip.AddrPort]*connInfo
 	mu         sync.RWMutex
-	term       *util.Terminator
+	recvTerm   *util.Terminator
+	inputTerm  *util.Terminator
 }
 
 func NewMultiplexer(
@@ -47,7 +48,8 @@ func NewMultiplexer(
 		inputChan:  inputChan,
 		outputChan: outputChan,
 		connInfos:  make(map[netip.AddrPort]*connInfo),
-		term:       util.NewTerminator(),
+		recvTerm:   util.NewTerminator(),
+		inputTerm:  util.NewTerminator(),
 	}
 }
 
@@ -92,11 +94,11 @@ func (m *Multiplexer) loadAllConnInfos() []*connInfo {
 	return cis
 }
 
-func (m *Multiplexer) Start() {
-	defer m.term.Done()
+func (m *Multiplexer) runRecvChanMux() {
+	defer m.recvTerm.Done()
 	for {
 		select {
-		case <-m.term.Quit():
+		case <-m.recvTerm.Quit():
 			return
 		case msg := <-m.recvChan:
 			log.Printf("gbn.Multiplexer: got %+v\n", msg)
@@ -109,20 +111,38 @@ func (m *Multiplexer) Start() {
 				ci.localReceiverRecvChan <- msg
 				log.Printf("gbn.Multiplexer: forward data %+v\n", msg)
 			}
-		case r := <-m.inputChan:
-			cis := m.loadAllConnInfos()
-			// broadcast char to all senders (should only be 1 for client)
-			go func() {
-				for _, ci := range cis {
-					ci.waitChan <- r
-				}
-			}()
 		}
 	}
 }
 
+func (m *Multiplexer) runInputChanMux() {
+	defer m.inputTerm.Done()
+	for {
+		select {
+		case <-m.inputTerm.Quit():
+			return
+		case r := <-m.inputChan:
+			cis := m.loadAllConnInfos()
+			// broadcast char to all senders (should only be 1 for client)
+			for _, ci := range cis {
+				select {
+				case <-m.inputTerm.Quit():
+					return
+				case ci.waitChan <- r:
+				}
+			}
+		}
+	}
+}
+
+func (m *Multiplexer) Start() {
+	go m.runRecvChanMux()
+	go m.runInputChanMux()
+}
+
 func (m *Multiplexer) Stop() {
-	m.term.Terminate()
+	m.inputTerm.Terminate()
+	m.recvTerm.Terminate()
 	for _, ci := range m.connInfos {
 		ci.sender.Stop()
 		ci.receiver.Stop()
