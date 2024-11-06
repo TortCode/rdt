@@ -1,6 +1,7 @@
 package gbn
 
 import (
+	"log"
 	"net"
 	"rdt/internal/config"
 	"rdt/internal/message"
@@ -83,6 +84,7 @@ func (m *Multiplexer) Start() {
 		case <-m.term.Quit():
 			return
 		case msg := <-m.recvChan:
+			log.Printf("gbn.Multiplexer: got %+v\n", msg)
 			ci := m.loadConnInfo(msg.Addr)
 			if ci == nil {
 				m.addHandler(msg.Addr)
@@ -90,8 +92,10 @@ func (m *Multiplexer) Start() {
 			}
 			if msg.IsAck {
 				ci.localSenderRecvChan <- msg
+				log.Printf("gbn.Multiplexer: forward ack %+v\n", msg)
 			} else {
 				ci.localReceiverRecvChan <- msg
+				log.Printf("gbn.Multiplexer: forward data %+v\n", msg)
 			}
 		case r := <-m.inputChan:
 			cis := m.loadAllConnInfos()
