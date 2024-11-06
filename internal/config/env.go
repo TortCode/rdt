@@ -19,27 +19,20 @@ var PortNumber uint16
 var WindowSize uint32
 var MaxSeqNo uint32
 
-func init() {
-	portNumberStr, ok := os.LookupEnv("PORT")
+func lookupEnvInt(key string, bits int) uint64 {
+	str, ok := os.LookupEnv(key)
 	if !ok {
-		log.Fatalln("PORT environment variable not set")
+		log.Fatalf("Environment variable %s not set\n", key)
 	}
-	portNumber, err := strconv.ParseUint(portNumberStr, 10, 16)
+	number, err := strconv.ParseUint(str, 10, bits)
 	if err != nil {
-		log.Fatalln("Could not parse PORT:", err)
+		log.Fatalf("Could not parse %s:\n", err)
 	}
-	PortNumber = uint16(portNumber)
+	return number
 }
 
 func init() {
-	windowSizeStr, ok := os.LookupEnv("WINDOW_SIZE")
-	if !ok {
-		log.Fatalln("WINDOW_SIZE environment variable not set")
-	}
-	windowSize, err := strconv.ParseUint(windowSizeStr, 10, 32)
-	if err != nil {
-		log.Fatalln("Could not parse WINDOW_SIZE:", err)
-	}
-	WindowSize = uint32(windowSize)
-	MaxSeqNo = WindowSize * 2
+	PortNumber = uint16(lookupEnvInt("PORT", 16))
+	WindowSize = uint32(lookupEnvInt("WINDOW_SIZE", 32))
+	MaxSeqNo = uint32(lookupEnvInt("MAX_SEQ_NO", 32))
 }
