@@ -18,8 +18,7 @@ func main() {
 	}
 
 	serverAddr := serverAddress()
-
-	conn, err := net.DialUDP("udp", nil, serverAddr)
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
 	if err != nil {
 		log.Fatalln("Failed to connect to server:", err)
 	}
