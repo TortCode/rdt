@@ -40,7 +40,7 @@ func NewSender(
 		baseSeqNo:  0,
 		nextSeqNo:  0,
 		buf:        make([]rune, config.WindowSize),
-		timeout:    NewTimeoutTimer(config.GBNTimeout),
+		timeout:    NewTimeoutTimer(config.GBNWriteTimeout),
 		term:       util.NewTerminator(),
 	}
 }

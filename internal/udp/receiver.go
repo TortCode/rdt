@@ -36,7 +36,7 @@ func (r *Receiver) Start() {
 			return
 		default:
 		}
-		r.conn.SetReadDeadline(time.Now().Add(config.ReadDeadlineTimeout))
+		r.conn.SetReadDeadline(time.Now().Add(config.UDPReadTimeout))
 		// read data
 		n, addr, err := r.conn.ReadFromUDPAddrPort(buf)
 		if err != nil {

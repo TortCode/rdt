@@ -7,20 +7,21 @@ import (
 	"time"
 )
 
-const RecvChannelBufferSize = 32
-const SendChannelBufferSize = 64
-const LocalRecvChannelBufferSize = 8
-const LocalInputChannelBufferSize = 4
-const WaiterChannelBufferSize = 8
-const InputChannelBufferSize = 4
-const OutputChannelBufferSize = 4
-const GBNTimeout = 5 * time.Second
-const ReadDeadlineTimeout = time.Second
-const WriteDeadlineTimeout = time.Second
+const RecvChanBufferSize = 64
+const SendChanBufferSize = 64
+const LocalSenderRecvChanBufferSize = 8
+const LocalReceiverRecvChanBufferSize = 8
+const LocalInputChanBufferSize = 8
+const WaitChanBufferSize = 8
+const InputChanBufferSize = 8
+const OutputChanBufferSize = 4
+const GBNWriteTimeout = 5 * time.Second
+const UDPReadTimeout = time.Second
+const UDPWriteTimeout = time.Second
 
-var PortNumber uint16
-var WindowSize uint32
-var MaxSeqNo uint32
+var PortNumber = uint16(lookupEnvInt("PORT", 16))
+var WindowSize = uint32(lookupEnvInt("WINDOW_SIZE", 32))
+var MaxSeqNo = uint32(lookupEnvInt("MAX_SEQ_NO", 32))
 
 // lookupEnvInt parses an environment variable into an unsigned integer.
 // the integer will have the specified number of bits
@@ -34,10 +35,4 @@ func lookupEnvInt(key string, bits int) uint64 {
 		log.Fatalf("Could not parse %s: %v\n", key, err)
 	}
 	return number
-}
-
-func init() {
-	PortNumber = uint16(lookupEnvInt("PORT", 16))
-	WindowSize = uint32(lookupEnvInt("WINDOW_SIZE", 32))
-	MaxSeqNo = uint32(lookupEnvInt("MAX_SEQ_NO", 32))
 }

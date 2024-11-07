@@ -61,10 +61,10 @@ func (m *Multiplexer) registerAddress(addr netip.AddrPort) {
 	if _, ok := m.connInfos[addr]; ok {
 		return
 	}
-	localSenderRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
-	localReceiverRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
-	localInputChan := make(chan rune, config.LocalInputChannelBufferSize)
-	waitChan := make(chan rune, config.WaiterChannelBufferSize)
+	localSenderRecvChan := make(chan *message.AddressedMessage, config.LocalSenderRecvChanBufferSize)
+	localReceiverRecvChan := make(chan *message.AddressedMessage, config.LocalReceiverRecvChanBufferSize)
+	localInputChan := make(chan rune, config.LocalInputChanBufferSize)
+	waitChan := make(chan rune, config.WaitChanBufferSize)
 	ci := &connInfo{
 		localSenderRecvChan:   localSenderRecvChan,
 		localReceiverRecvChan: localReceiverRecvChan,

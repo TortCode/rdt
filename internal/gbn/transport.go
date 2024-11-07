@@ -16,10 +16,10 @@ type Transport struct {
 }
 
 func NewTransport(conn *net.UDPConn) *Transport {
-	inputChan := make(chan rune, config.InputChannelBufferSize)
-	outputChan := make(chan rune, config.OutputChannelBufferSize)
-	sendChan := make(chan *message.AddressedMessage, config.SendChannelBufferSize)
-	recvChan := make(chan *message.AddressedMessage, config.RecvChannelBufferSize)
+	inputChan := make(chan rune, config.InputChanBufferSize)
+	outputChan := make(chan rune, config.OutputChanBufferSize)
+	sendChan := make(chan *message.AddressedMessage, config.SendChanBufferSize)
+	recvChan := make(chan *message.AddressedMessage, config.RecvChanBufferSize)
 	return &Transport{
 		sender:   udp.NewSender(conn, sendChan),
 		receiver: udp.NewReceiver(conn, recvChan),

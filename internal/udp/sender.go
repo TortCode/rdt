@@ -47,7 +47,7 @@ func (s *Sender) Start() {
 					return
 				default:
 				}
-				s.conn.SetWriteDeadline(time.Now().Add(config.WriteDeadlineTimeout))
+				s.conn.SetWriteDeadline(time.Now().Add(config.UDPWriteTimeout))
 				if _, err := s.conn.WriteToUDPAddrPort(data, msg.Addr); err != nil {
 					if errors.Is(err, os.ErrDeadlineExceeded) {
 						continue
