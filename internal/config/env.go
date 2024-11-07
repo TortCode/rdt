@@ -14,12 +14,16 @@ const LocalInputChannelBufferSize = 4
 const WaiterChannelBufferSize = 8
 const InputChannelBufferSize = 4
 const OutputChannelBufferSize = 4
-const Timeout = 5 * time.Second
+const GBNTimeout = 5 * time.Second
+const ReadDeadlineTimeout = time.Second
+const WriteDeadlineTimeout = time.Second
 
 var PortNumber uint16
 var WindowSize uint32
 var MaxSeqNo uint32
 
+// lookupEnvInt parses an environment variable into an unsigned integer.
+// the integer will have the specified number of bits
 func lookupEnvInt(key string, bits int) uint64 {
 	str, ok := os.LookupEnv(key)
 	if !ok {
@@ -27,7 +31,7 @@ func lookupEnvInt(key string, bits int) uint64 {
 	}
 	number, err := strconv.ParseUint(str, 10, bits)
 	if err != nil {
-		log.Fatalf("Could not parse %s:\n", err)
+		log.Fatalf("Could not parse %s: %v\n", key, err)
 	}
 	return number
 }

@@ -38,11 +38,9 @@ func NewReceiver(
 }
 
 func (r *Receiver) Start() {
-	// signal done after completion
 	defer r.term.Done()
 	for {
 		select {
-		// check for quit
 		case <-r.term.Quit():
 			return
 		case msg := <-r.recvQueue:

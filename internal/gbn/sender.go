@@ -1,7 +1,6 @@
 package gbn
 
 import (
-	"log"
 	"net/netip"
 	"rdt/internal/config"
 	"rdt/internal/message"
@@ -41,22 +40,21 @@ func NewSender(
 		baseSeqNo:  0,
 		nextSeqNo:  0,
 		buf:        make([]rune, config.WindowSize),
-		timeout:    NewTimeoutTimer(config.Timeout),
+		timeout:    NewTimeoutTimer(config.GBNTimeout),
 		term:       util.NewTerminator(),
 	}
 }
 
+// WaitForReady waits until s has available room in its window
+// to send new messages
 func (s *Sender) WaitForReady() {
 	s.sem <- struct{}{}
 }
 
 func (s *Sender) Start() {
-	log.Printf("gbn.Sender: START %v\n", s.remoteAddr)
-	// signal done after completion
 	defer s.term.Done()
 	for {
 		select {
-		// check for quit
 		case <-s.term.Quit():
 			return
 		case msg := <-s.recvQueue:

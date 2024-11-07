@@ -1,7 +1,6 @@
 package gbn
 
 import (
-	"log"
 	"net/netip"
 	"rdt/internal/config"
 	"rdt/internal/message"
@@ -18,7 +17,9 @@ type connInfo struct {
 	receiver              *Receiver
 }
 
-func (w *connInfo) RunWaiter() {
+// runWaiter reads from waitChan and forwards characters into localInputChan
+// when sender is ready
+func (w *connInfo) runWaiter() {
 	for r := range w.waitChan {
 		w.sender.WaitForReady()
 		w.localInputChan <- r
@@ -53,13 +54,13 @@ func NewMultiplexer(
 	}
 }
 
-func (m *Multiplexer) addHandler(addr netip.AddrPort) {
+// registerAddress registers addr as a source/destination for messages
+func (m *Multiplexer) registerAddress(addr netip.AddrPort) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, ok := m.connInfos[addr]; ok {
 		return
 	}
-	log.Printf("New connection from: %s", addr)
 	localSenderRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
 	localReceiverRecvChan := make(chan *message.AddressedMessage, config.LocalRecvChannelBufferSize)
 	localInputChan := make(chan rune, config.LocalInputChannelBufferSize)
@@ -74,16 +75,18 @@ func (m *Multiplexer) addHandler(addr netip.AddrPort) {
 	}
 	go ci.sender.Start()
 	go ci.receiver.Start()
-	go ci.RunWaiter()
+	go ci.runWaiter()
 	m.connInfos[addr] = ci
 }
 
+// loadConnInfo loads the connection info associated with addr
 func (m *Multiplexer) loadConnInfo(addr netip.AddrPort) *connInfo {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.connInfos[addr]
 }
 
+// loadAllConnInfos loads the connection infos associated with all addresses
 func (m *Multiplexer) loadAllConnInfos() []*connInfo {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -94,6 +97,7 @@ func (m *Multiplexer) loadAllConnInfos() []*connInfo {
 	return cis
 }
 
+// runRecvChanMux demultiplexes messages from recvChan onto local recv channels for each connection
 func (m *Multiplexer) runRecvChanMux() {
 	defer m.recvTerm.Done()
 	for {
@@ -101,17 +105,26 @@ func (m *Multiplexer) runRecvChanMux() {
 		case <-m.recvTerm.Quit():
 			return
 		case msg := <-m.recvChan:
-			m.addHandler(msg.Addr)
+			m.registerAddress(msg.Addr)
 			ci := m.loadConnInfo(msg.Addr)
 			if msg.IsAck {
-				ci.localSenderRecvChan <- msg
+				select {
+				case <-m.recvTerm.Quit():
+					return
+				case ci.localSenderRecvChan <- msg:
+				}
 			} else {
-				ci.localReceiverRecvChan <- msg
+				select {
+				case <-m.recvTerm.Quit():
+					return
+				case ci.localReceiverRecvChan <- msg:
+				}
 			}
 		}
 	}
 }
 
+// runInputChanMux broadcasts inputs from inputChan to all senders
 func (m *Multiplexer) runInputChanMux() {
 	defer m.inputTerm.Done()
 	for {
@@ -120,7 +133,6 @@ func (m *Multiplexer) runInputChanMux() {
 			return
 		case r := <-m.inputChan:
 			cis := m.loadAllConnInfos()
-			// broadcast char to all senders (should only be 1 for client)
 			for _, ci := range cis {
 				select {
 				case <-m.inputTerm.Quit():
@@ -140,6 +152,8 @@ func (m *Multiplexer) Start() {
 func (m *Multiplexer) Stop() {
 	m.inputTerm.Terminate()
 	m.recvTerm.Terminate()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	for _, ci := range m.connInfos {
 		ci.sender.Stop()
 		ci.receiver.Stop()

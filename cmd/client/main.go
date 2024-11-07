@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -27,10 +28,12 @@ func main() {
 		_ = conn.Close()
 	}()
 
+	fmt.Println("Press CTRL-D to stop...")
+
 	transport := gbn.NewTransport(conn)
 	transport.Start()
-	transport.AddHandler(serverAddr)
 	defer transport.Stop()
+	transport.RegisterAddress(serverAddr)
 
 	consoleReader := bufio.NewReader(os.Stdin)
 	for {
@@ -41,6 +44,7 @@ func main() {
 			}
 			log.Fatalln(err)
 		}
+		// ignore whitespace characters
 		if !unicode.IsSpace(r) {
 			transport.InputChan() <- r
 		}
@@ -56,10 +60,10 @@ func serverAddress() netip.AddrPort {
 	for i := range serverIpAddrs {
 		serverIpAddrs[i] = serverIpAddrs[i].To16()
 	}
-	log.Println("Available server addresses:", serverIpAddrs)
+	log.Println("Server addresses:", serverIpAddrs)
 	serverIpAddr, ok := netip.AddrFromSlice(serverIpAddrs[0])
 	if !ok {
-		log.Fatalln("Failed to parse server address")
+		log.Fatalln("Failed to parse server address into netip.AddrPort")
 	}
 	serverAddrPort := netip.AddrPortFrom(serverIpAddr, config.PortNumber)
 	return serverAddrPort

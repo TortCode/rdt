@@ -8,15 +8,17 @@ import (
 	"strings"
 )
 
+// AddressedMessage represents a message to be sent to Addr
 type AddressedMessage struct {
 	Message
 	Addr netip.AddrPort
 }
 
+// Message represents either data item with a character or an acknowledgement.
 type Message struct {
-	IsAck bool
-	SeqNo uint32
-	Char  rune
+	IsAck bool   // flag that indicates the message is an acknowledgement
+	SeqNo uint32 // sequence no. of message
+	Char  rune   // character sent in data message
 }
 
 func NewDataMessage(addr netip.AddrPort, seqNo uint32, char rune) *AddressedMessage {

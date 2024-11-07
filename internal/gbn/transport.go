@@ -1,6 +1,7 @@
 package gbn
 
 import (
+	"log"
 	"net"
 	"net/netip"
 	"rdt/internal/config"
@@ -26,14 +27,17 @@ func NewTransport(conn *net.UDPConn) *Transport {
 	}
 }
 
-func (t *Transport) AddHandler(addr netip.AddrPort) {
-	t.mux.addHandler(addr)
+// RegisterAddress registers addr with the multiplexer
+func (t *Transport) RegisterAddress(addr netip.AddrPort) {
+	t.mux.registerAddress(addr)
 }
 
+// InputChan obtains a sendable channel for input characters to screen
 func (t *Transport) InputChan() chan<- rune {
 	return t.mux.inputChan
 }
 
+// OutputChan obtains a receivable channel for output characters to screen
 func (t *Transport) OutputChan() <-chan rune {
 	return t.mux.outputChan
 }
@@ -46,8 +50,11 @@ func (t *Transport) Start() {
 
 func (t *Transport) Stop() {
 	t.sender.Stop()
+	log.Println("udp.Sender stopped")
 	t.receiver.Stop()
+	log.Println("udp.Receiver stopped")
 	t.mux.Stop()
+	log.Println("gbn.Multiplexer stopped")
 	close(t.mux.sendChan)
 	close(t.mux.recvChan)
 	close(t.mux.inputChan)

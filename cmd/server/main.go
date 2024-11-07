@@ -20,12 +20,12 @@ func main() {
 		_ = conn.Close()
 	}()
 
-	fmt.Println("Press <Enter> to stop:")
-	// send a signal on done when user presses <Enter>
+	fmt.Println("Press <Enter> to stop...")
+	// close done channel when user presses <Enter>
 	done := make(chan struct{})
 	go func() {
-		fmt.Scanln()
-		done <- struct{}{}
+		_, _ = fmt.Scanln()
+		close(done)
 	}()
 
 	transport := gbn.NewTransport(conn)
@@ -37,7 +37,7 @@ func main() {
 		case <-done:
 			return
 		case r := <-transport.OutputChan():
-			log.Printf("OUT: %c\n", r)
+			log.Printf("screen: %c\n", r)
 		}
 	}
 }
