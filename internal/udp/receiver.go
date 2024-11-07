@@ -47,7 +47,7 @@ func (r *Receiver) Start() {
 			log.Printf("udp.Receiver: failed to unmarshal message: %v", err)
 			continue
 		}
-		log.Printf("udp.Receiver: RECV %+v\n", msg)
+		log.Printf("udp.Receiver: recv %+v\n", msg)
 		r.ch <- msg
 	}
 }

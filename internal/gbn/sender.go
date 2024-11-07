@@ -60,7 +60,6 @@ func (s *Sender) Start() {
 		case <-s.term.Quit():
 			return
 		case msg := <-s.recvQueue:
-			log.Printf("gbn.Sender: RECV %+v\n", msg)
 			// shift window
 			newBaseSeqNo := (msg.SeqNo + 1) % config.MaxSeqNo
 			windowShift := (newBaseSeqNo - s.baseSeqNo + config.MaxSeqNo) % config.MaxSeqNo
@@ -82,7 +81,6 @@ func (s *Sender) Start() {
 			// send data
 			msg := message.NewDataMessage(s.remoteAddr, s.nextSeqNo, char)
 			s.sendQueue <- msg
-			log.Printf("gbn.Sender: SEND %+v\n", msg)
 			if s.baseSeqNo == s.nextSeqNo {
 				// start timer for oldest unacked message
 				s.timeout.Start()
@@ -97,7 +95,6 @@ func (s *Sender) Start() {
 				char := s.buf[i%config.WindowSize]
 				msg := message.NewDataMessage(s.remoteAddr, i, char)
 				s.sendQueue <- msg
-				log.Printf("gbn.Sender: SEND %+v\n", msg)
 			}
 		}
 	}

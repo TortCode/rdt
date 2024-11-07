@@ -101,15 +101,12 @@ func (m *Multiplexer) runRecvChanMux() {
 		case <-m.recvTerm.Quit():
 			return
 		case msg := <-m.recvChan:
-			log.Printf("gbn.Multiplexer: got %+v\n", msg)
 			m.addHandler(msg.Addr)
 			ci := m.loadConnInfo(msg.Addr)
 			if msg.IsAck {
 				ci.localSenderRecvChan <- msg
-				log.Printf("gbn.Multiplexer: forward ack %+v\n", msg)
 			} else {
 				ci.localReceiverRecvChan <- msg
-				log.Printf("gbn.Multiplexer: forward data %+v\n", msg)
 			}
 		}
 	}

@@ -1,7 +1,6 @@
 package gbn
 
 import (
-	"log"
 	"net/netip"
 	"rdt/internal/config"
 	"rdt/internal/message"
@@ -39,7 +38,6 @@ func NewReceiver(
 }
 
 func (r *Receiver) Start() {
-	log.Printf("gbn.Receiver: START %v\n", r.remoteAddr)
 	// signal done after completion
 	defer r.term.Done()
 	for {
@@ -48,7 +46,6 @@ func (r *Receiver) Start() {
 		case <-r.term.Quit():
 			return
 		case msg := <-r.recvQueue:
-			log.Printf("gbn.Receiver: RECV %+v\n", msg)
 			if msg.SeqNo == r.expectedSeqNo {
 				// send output to user
 				r.outputChan <- msg.Char
@@ -60,7 +57,6 @@ func (r *Receiver) Start() {
 			prevSeqNo := (r.expectedSeqNo - 1 + config.MaxSeqNo) % config.MaxSeqNo
 			ackMsg := message.NewAckMessage(r.remoteAddr, prevSeqNo)
 			r.sendQueue <- ackMsg
-			log.Printf("gbn.Receiver: SEND %+v\n", msg)
 		}
 	}
 }
