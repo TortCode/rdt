@@ -7,7 +7,7 @@ Execute the build script on any machine with golang installed, passing in target
 ```
 *The machine where the program is built can have a different os/arch than the target.
 
-You can compile for the all of the most common targets (os=linux/darwin/windows) and (arch=amd64/arm64)
+You can compile for the most common targets (os=linux/darwin/windows) and (arch=amd64/arm64)
 with
 ```bash
 ./buildall.sh
