@@ -8,33 +8,16 @@ import (
 	"sync"
 )
 
-type connInfo struct {
-	localSenderRecvChan   chan *message.AddressedMessage
-	localReceiverRecvChan chan *message.AddressedMessage
-	localInputChan        chan rune
-	waitChan              chan rune
-	sender                *Sender
-	receiver              *Receiver
-}
-
-// runWaiter reads from waitChan and forwards characters into localInputChan
-// when sender is ready
-func (w *connInfo) runWaiter() {
-	for r := range w.waitChan {
-		w.sender.WaitForReady()
-		w.localInputChan <- r
-	}
-}
-
 type Multiplexer struct {
-	sendChan   chan *message.AddressedMessage // outgoing messages
-	recvChan   chan *message.AddressedMessage // incoming messages
-	inputChan  chan rune
-	outputChan chan rune
-	connInfos  map[netip.AddrPort]*connInfo
-	mu         sync.RWMutex
-	recvTerm   *util.Terminator
-	inputTerm  *util.Terminator
+	sendChan     chan *message.AddressedMessage
+	recvChan     chan *message.AddressedMessage
+	inputChan    chan rune
+	outputChan   chan rune
+	connInfos    map[netip.AddrPort]*connInfo
+	mu           sync.RWMutex
+	recvTerm     *util.Terminator
+	inputTerm    *util.Terminator
+	autoRegister bool
 }
 
 func NewMultiplexer(
@@ -42,59 +25,38 @@ func NewMultiplexer(
 	recvChan chan *message.AddressedMessage,
 	inputChan chan rune,
 	outputChan chan rune,
+	autoRegister bool,
 ) *Multiplexer {
 	return &Multiplexer{
-		sendChan:   sendChan,
-		recvChan:   recvChan,
-		inputChan:  inputChan,
-		outputChan: outputChan,
-		connInfos:  make(map[netip.AddrPort]*connInfo),
-		recvTerm:   util.NewTerminator(),
-		inputTerm:  util.NewTerminator(),
+		sendChan:     sendChan,
+		recvChan:     recvChan,
+		inputChan:    inputChan,
+		outputChan:   outputChan,
+		connInfos:    make(map[netip.AddrPort]*connInfo),
+		recvTerm:     util.NewTerminator(),
+		inputTerm:    util.NewTerminator(),
+		autoRegister: autoRegister,
 	}
 }
 
-// registerAddress registers addr as a source/destination for messages
-func (m *Multiplexer) registerAddress(addr netip.AddrPort) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.connInfos[addr]; ok {
-		return
-	}
-	localSenderRecvChan := make(chan *message.AddressedMessage, config.LocalSenderRecvChanBufferSize)
-	localReceiverRecvChan := make(chan *message.AddressedMessage, config.LocalReceiverRecvChanBufferSize)
-	localInputChan := make(chan rune, config.LocalInputChanBufferSize)
-	waitChan := make(chan rune, config.WaitChanBufferSize)
-	ci := &connInfo{
-		localSenderRecvChan:   localSenderRecvChan,
-		localReceiverRecvChan: localReceiverRecvChan,
-		localInputChan:        localInputChan,
-		waitChan:              waitChan,
-		sender:                NewSender(m.sendChan, localSenderRecvChan, localInputChan, addr),
-		receiver:              NewReceiver(m.sendChan, localReceiverRecvChan, m.outputChan, addr),
-	}
-	go ci.sender.Start()
-	go ci.receiver.Start()
-	go ci.runWaiter()
-	m.connInfos[addr] = ci
+func (m *Multiplexer) Start() {
+	go m.runRecvChanMux()
+	go m.runInputChanMux()
 }
 
-// loadConnInfo loads the connection info associated with addr
-func (m *Multiplexer) loadConnInfo(addr netip.AddrPort) *connInfo {
+func (m *Multiplexer) Stop() {
+	m.inputTerm.Terminate()
+	m.recvTerm.Terminate()
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.connInfos[addr]
-}
-
-// loadAllConnInfos loads the connection infos associated with all addresses
-func (m *Multiplexer) loadAllConnInfos() []*connInfo {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	cis := make([]*connInfo, 0, len(m.connInfos))
 	for _, ci := range m.connInfos {
-		cis = append(cis, ci)
+		ci.sender.Stop()
+		ci.receiver.Stop()
+		close(ci.waitChan)
+		close(ci.localInputChan)
+		close(ci.localReceiverRecvChan)
+		close(ci.localSenderRecvChan)
 	}
-	return cis
 }
 
 // runRecvChanMux demultiplexes messages from recvChan onto local recv channels for each connection
@@ -105,8 +67,15 @@ func (m *Multiplexer) runRecvChanMux() {
 		case <-m.recvTerm.Quit():
 			return
 		case msg := <-m.recvChan:
-			m.registerAddress(msg.Addr)
-			ci := m.loadConnInfo(msg.Addr)
+			ci, found := m.loadConnInfo(msg.Addr)
+			if !found {
+				if !m.autoRegister {
+					continue
+				}
+				// register and reload connection info
+				m.registerAddress(msg.Addr)
+				ci, _ = m.loadConnInfo(msg.Addr)
+			}
 			if msg.IsAck {
 				select {
 				case <-m.recvTerm.Quit():
@@ -144,22 +113,64 @@ func (m *Multiplexer) runInputChanMux() {
 	}
 }
 
-func (m *Multiplexer) Start() {
-	go m.runRecvChanMux()
-	go m.runInputChanMux()
+// registerAddress registers an address as a source/destination for messages
+func (m *Multiplexer) registerAddress(addr netip.AddrPort) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.connInfos[addr]; ok {
+		return
+	}
+	localSenderRecvChan := make(chan *message.AddressedMessage, config.LocalSenderRecvChanBufferSize)
+	localReceiverRecvChan := make(chan *message.AddressedMessage, config.LocalReceiverRecvChanBufferSize)
+	localInputChan := make(chan rune, config.LocalInputChanBufferSize)
+	waitChan := make(chan rune, config.WaitChanBufferSize)
+	ci := &connInfo{
+		localSenderRecvChan:   localSenderRecvChan,
+		localReceiverRecvChan: localReceiverRecvChan,
+		localInputChan:        localInputChan,
+		waitChan:              waitChan,
+		sender:                NewSender(m.sendChan, localSenderRecvChan, localInputChan, addr),
+		receiver:              NewReceiver(m.sendChan, localReceiverRecvChan, m.outputChan, addr),
+	}
+	go ci.sender.Start()
+	go ci.receiver.Start()
+	go ci.runWaiter()
+	m.connInfos[addr] = ci
 }
 
-func (m *Multiplexer) Stop() {
-	m.inputTerm.Terminate()
-	m.recvTerm.Terminate()
+// loadConnInfo loads the connection info associated with addr
+func (m *Multiplexer) loadConnInfo(addr netip.AddrPort) (*connInfo, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	ci, found := m.connInfos[addr]
+	return ci, found
+}
+
+// loadAllConnInfos loads the connection infos associated with all addresses
+func (m *Multiplexer) loadAllConnInfos() []*connInfo {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	cis := make([]*connInfo, 0, len(m.connInfos))
 	for _, ci := range m.connInfos {
-		ci.sender.Stop()
-		ci.receiver.Stop()
-		close(ci.waitChan)
-		close(ci.localInputChan)
-		close(ci.localReceiverRecvChan)
-		close(ci.localSenderRecvChan)
+		cis = append(cis, ci)
+	}
+	return cis
+}
+
+type connInfo struct {
+	localSenderRecvChan   chan *message.AddressedMessage
+	localReceiverRecvChan chan *message.AddressedMessage
+	localInputChan        chan rune
+	waitChan              chan rune
+	sender                *Sender
+	receiver              *Receiver
+}
+
+// runWaiter reads from waitChan
+// and forwards characters into localInputChan when sender is ready
+func (w *connInfo) runWaiter() {
+	for r := range w.waitChan {
+		w.sender.WaitForReady()
+		w.localInputChan <- r
 	}
 }

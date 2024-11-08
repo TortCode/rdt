@@ -3,22 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
-	"net/netip"
-	"rdt/internal/config"
 	"rdt/internal/gbn"
 )
 
 func main() {
-	listenerAddr := netip.AddrPortFrom(netip.IPv6Unspecified(), config.PortNumber)
-
-	conn, err := net.ListenUDP("udp", net.UDPAddrFromAddrPort(listenerAddr))
-	if err != nil {
-		log.Fatalln("Failed to bind to port:", err)
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
 
 	fmt.Println("Press <Enter> to stop...")
 	// close done channel when user presses <Enter>
@@ -28,7 +16,7 @@ func main() {
 		close(done)
 	}()
 
-	transport := gbn.NewTransport(conn)
+	transport := gbn.NewServerTransport()
 	transport.Start()
 	defer transport.Stop()
 

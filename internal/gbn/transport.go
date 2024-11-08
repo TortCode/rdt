@@ -13,9 +13,24 @@ type Transport struct {
 	sender   *udp.Sender
 	receiver *udp.Receiver
 	mux      *Multiplexer
+	conn     *net.UDPConn
 }
 
-func NewTransport(conn *net.UDPConn) *Transport {
+func NewClientTransport() *Transport {
+	return newTransport(0, false)
+}
+
+func NewServerTransport() *Transport {
+	return newTransport(config.PortNumber, true)
+}
+
+func newTransport(port uint16, isServer bool) *Transport {
+	conn, err := net.ListenUDP("udp", net.UDPAddrFromAddrPort(
+		netip.AddrPortFrom(netip.IPv6Unspecified(), port),
+	))
+	if err != nil {
+		log.Fatalln("Failed to bind to port:", err)
+	}
 	inputChan := make(chan rune, config.InputChanBufferSize)
 	outputChan := make(chan rune, config.OutputChanBufferSize)
 	sendChan := make(chan *message.AddressedMessage, config.SendChanBufferSize)
@@ -23,7 +38,8 @@ func NewTransport(conn *net.UDPConn) *Transport {
 	return &Transport{
 		sender:   udp.NewSender(conn, sendChan),
 		receiver: udp.NewReceiver(conn, recvChan),
-		mux:      NewMultiplexer(sendChan, recvChan, inputChan, outputChan),
+		mux:      NewMultiplexer(sendChan, recvChan, inputChan, outputChan, isServer),
+		conn:     conn,
 	}
 }
 
@@ -59,4 +75,5 @@ func (t *Transport) Stop() {
 	close(t.mux.recvChan)
 	close(t.mux.inputChan)
 	close(t.mux.outputChan)
+	_ = t.conn.Close()
 }

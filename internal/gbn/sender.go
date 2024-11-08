@@ -45,12 +45,6 @@ func NewSender(
 	}
 }
 
-// WaitForReady waits until s has available room in its window
-// to send new messages
-func (s *Sender) WaitForReady() {
-	s.sem <- struct{}{}
-}
-
 func (s *Sender) Start() {
 	defer s.term.Done()
 	for {
@@ -101,4 +95,10 @@ func (s *Sender) Start() {
 func (s *Sender) Stop() {
 	s.term.Terminate()
 	close(s.sem)
+}
+
+// WaitForReady waits until s has available room in its window
+// to send new messages
+func (s *Sender) WaitForReady() {
+	s.sem <- struct{}{}
 }

@@ -18,11 +18,6 @@ func NewTimeoutTimer(d time.Duration) *TimeoutTimer {
 	return t
 }
 
-// Channel obtains a channel where the current time will be sent upon timeout
-func (t *TimeoutTimer) Channel() <-chan time.Time {
-	return t.timer.C
-}
-
 // Start starts the timer with deadline that is a duration of t.d in the future
 func (t *TimeoutTimer) Start() {
 	t.Stop()
@@ -38,4 +33,9 @@ func (t *TimeoutTimer) Stop() {
 	case <-t.timer.C:
 	default:
 	}
+}
+
+// Channel obtains a channel where the current time will be sent upon timeout
+func (t *TimeoutTimer) Channel() <-chan time.Time {
+	return t.timer.C
 }

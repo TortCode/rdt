@@ -20,17 +20,10 @@ func main() {
 	}
 
 	serverAddr := serverAddress()
-	conn, err := net.ListenUDP("udp", net.UDPAddrFromAddrPort(netip.AddrPortFrom(netip.IPv6Unspecified(), 0)))
-	if err != nil {
-		log.Fatalln("Failed to connect to server:", err)
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
 
 	fmt.Println("Press CTRL-D to stop...")
 
-	transport := gbn.NewTransport(conn)
+	transport := gbn.NewClientTransport()
 	transport.Start()
 	defer transport.Stop()
 	transport.RegisterAddress(serverAddr)
