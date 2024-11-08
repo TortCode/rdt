@@ -57,7 +57,7 @@ func (s *Sender) Start() {
 				}
 				break
 			}
-			log.Printf("send %+v\n", msg)
+			log.Printf("send: %-12q to   %v\n", data, msg.Addr)
 		}
 	}
 }

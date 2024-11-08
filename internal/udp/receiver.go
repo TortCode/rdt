@@ -29,7 +29,7 @@ func NewReceiver(conn *net.UDPConn, ch chan<- *message.AddressedMessage) *Receiv
 
 func (r *Receiver) Start() {
 	defer r.term.Done()
-	buf := make([]byte, 32)
+	buf := make([]byte, 16)
 	for {
 		select {
 		case <-r.term.Quit():
@@ -55,7 +55,7 @@ func (r *Receiver) Start() {
 			log.Printf("failed to unmarshal message: %v", err)
 			continue
 		}
-		log.Printf("recv %+v\n", msg)
+		log.Printf("recv: %-12q from %v\n", buf[:n], msg.Addr)
 		// forward to channel
 		select {
 		case <-r.term.Quit():

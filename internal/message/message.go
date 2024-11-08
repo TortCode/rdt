@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// AddressedMessage represents a message to be sent to Addr
+// AddressedMessage represents a message sent to/received from Addr
 type AddressedMessage struct {
 	Message
 	Addr netip.AddrPort
